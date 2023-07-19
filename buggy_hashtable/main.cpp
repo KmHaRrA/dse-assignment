@@ -29,6 +29,12 @@ struct Hashtable {
       uint64_t key;
       uint64_t value;
       Entry* next;
+
+      ~Entry() {
+	      if (next) {
+           delete next;
+	      }
+      }
    };
 
    uint64_t htSize;
@@ -42,11 +48,16 @@ struct Hashtable {
    }
 
    ~Hashtable() {
+      for (uint64_t i = 0; i < htSize; i++) {
+        if (ht[i]) {
+          delete ht[i];
+	      }
+      }
       munmap(ht, htSize);
    }
 
    Entry* lookup(uint64_t key) {
-      for (Entry* e=ht[hashKey(key)]; e; e=e->next)
+      for (Entry* e=ht[hashKey(key) & mask]; e; e=e->next)
          if (e->key==key)
             return e;
       return nullptr;
@@ -60,10 +71,10 @@ struct Hashtable {
       } else {
          uint64_t pos = hashKey(key) & mask;
          Entry* newEntry = new Entry();
-         ht[pos] = newEntry;
          newEntry->key = key;
          newEntry->value = value;
          newEntry->next = ht[pos];
+         ht[pos] = newEntry;
          return true;
       }
    }
@@ -71,11 +82,19 @@ struct Hashtable {
    bool erase(uint64_t key) {
       uint64_t pos = hashKey(key) & mask;
       Entry** ePtr = &ht[pos];
+      Entry** previousPtr = nullptr;
       while (Entry* e=(*ePtr)) {
          if (e->key==key) {
+		       if (previousPtr) {
+			        (*previousPtr)->next = e->next;
+		       } else {
+	            ht[pos] = e->next; 
+		       }
+   	        e->next = nullptr;
             delete e;
             return true;
          }
+	       previousPtr = ePtr;
          ePtr = &e->next;
       }
       return false;
