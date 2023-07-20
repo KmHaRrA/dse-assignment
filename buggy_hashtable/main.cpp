@@ -53,7 +53,7 @@ struct Hashtable {
           delete ht[i];
 	      }
       }
-      munmap(ht, htSize);
+      munmap(ht, sizeof(uint64_t) * htSize);
    }
 
    Entry* lookup(uint64_t key) {
